@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # One-command installer. Usage:
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Chomeles/sharko-forum/main/install.sh | bash
 # Requires Docker + Docker Compose v2. Clones the repo, generates secrets, boots it.
 set -euo pipefail
 
-REPO="${FORUM_REPO:-https://github.com/OWNER/REPO.git}"
+REPO="${FORUM_REPO:-https://github.com/Chomeles/sharko-forum.git}"
 DIR="${FORUM_DIR:-forum}"
 PORT="${WEB_PORT:-8000}"
 

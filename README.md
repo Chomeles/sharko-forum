@@ -1,4 +1,4 @@
-# Ember — a modern, self-hostable forum
+# sharko-forum — a modern, self-hostable forum
 
 A clean, dark, XenForo-style community forum you can stand up with **one command**.
 Built on Django 5.2 LTS + Postgres. No build step, no Node, no JS framework — just a
@@ -22,7 +22,7 @@ fast server-rendered app you can actually read and maintain.
 Requires [Docker](https://docs.docker.com/get-docker/) with Compose v2.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Chomeles/sharko-forum/main/install.sh | bash
 ```
 
 This clones the repo, generates secrets + an admin password, and boots the app +
@@ -31,7 +31,7 @@ Postgres. When it finishes, open **http://localhost:8000/** — admin panel at `
 Prefer to do it by hand?
 
 ```bash
-git clone https://github.com/OWNER/REPO.git && cd REPO
+git clone https://github.com/Chomeles/sharko-forum.git && cd sharko-forum
 cp .env.example .env
 # fill DJANGO_SECRET_KEY and POSTGRES_PASSWORD (any long random strings)
 docker compose up -d --build
@@ -72,7 +72,7 @@ Everything is env vars (see `.env.example`). The important ones:
 ## Updating
 
 ```bash
-cd REPO
+cd sharko-forum
 git pull
 docker compose up -d --build   # runs migrations automatically on boot
 ```
