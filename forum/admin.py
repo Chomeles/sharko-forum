@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Post, Thread
+from .models import Category, Post, Shout, Thread
 
 
 @admin.register(Category)
@@ -21,5 +21,12 @@ class ThreadAdmin(admin.ModelAdmin):
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = ("__str__", "thread", "author", "created")
+    list_filter = ("created",)
+    search_fields = ("body", "author__username")
+
+
+@admin.register(Shout)
+class ShoutAdmin(admin.ModelAdmin):
+    list_display = ("author", "body", "created")
     list_filter = ("created",)
     search_fields = ("body", "author__username")
