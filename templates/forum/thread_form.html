@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}New thread in {{ category.name }}{% endblock %}
+{% block content %}
+<p class="crumbs">
+  <a href="{% url 'forum:index' %}">Forum</a> ›
+  <a href="{{ category.get_absolute_url }}">{{ category.name }}</a> › New thread
+</p>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  <h1>New thread</h1>
+  {{ form.as_p }}
+  <button type="submit" class="btn">Create thread</button>
+</form>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Edit post{% endblock %}
+{% block content %}
+<p class="crumbs">
+  <a href="{% url 'forum:index' %}">Forum</a> ›
+  <a href="{{ post.thread.get_absolute_url }}">{{ post.thread.title|truncatechars:60 }}</a> › Edit post
+</p>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  <h1>Edit post</h1>
+  {{ form.as_p }}
+  <button type="submit" class="btn">Save</button>
+</form>
+{% endblock %}

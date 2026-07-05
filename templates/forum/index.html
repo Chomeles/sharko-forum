@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Forum{% endblock %}
+{% block content %}
+<h1>Categories</h1>
+<div class="cards">
+  {% for cat in categories %}
+    <a class="card" href="{{ cat.get_absolute_url }}">
+      <h2>{{ cat.name }}</h2>
+      <p class="muted">{{ cat.description }}</p>
+      <p class="meta">
+        {{ cat.thread_count }} thread{{ cat.thread_count|pluralize }}
+        {% if cat.last_activity %} · last activity {{ cat.last_activity|timesince }} ago{% endif %}
+      </p>
+    </a>
+  {% empty %}
+    <p class="muted">No categories yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

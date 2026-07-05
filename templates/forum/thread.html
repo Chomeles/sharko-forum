@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ thread.title }}{% endblock %}
+{% block content %}
+<p class="crumbs">
+  <a href="{% url 'forum:index' %}">Forum</a> ›
+  <a href="{{ thread.category.get_absolute_url }}">{{ thread.category.name }}</a> ›
+  {{ thread.title|truncatechars:60 }}
+</p>
+<h1>
+  {% if thread.is_pinned %}<span class="badge">Pinned</span>{% endif %}
+  {% if thread.is_locked %}<span class="badge badge-muted">Locked</span>{% endif %}
+  {{ thread.title }}
+</h1>
+
+{% for post in page %}
+  <article class="post" id="post-{{ post.pk }}">
+    <div class="post-head">
+      <strong>{{ post.author.username }}</strong>
+      <span class="meta">
+        {{ post.created|date:"j M Y, H:i" }}
+        {% if post.edited %} · edited {{ post.edited|timesince }} ago{% endif %}
+        {% if post.author_id == user.id or user.is_staff %}
+          · <a href="{% url 'forum:edit_post' post.pk %}">edit</a>
+        {% endif %}
+      </span>
+    </div>
+    <div class="post-body">{{ post.body|linebreaks }}</div>
+  </article>
+{% endfor %}
+{% include "forum/_pagination.html" %}
+
+{% if thread.is_locked %}
+  <p class="muted">This thread is locked.</p>
+{% elif user.is_authenticated %}
+  <form method="post" action="{% url 'forum:reply' thread.pk %}" class="card form-card">
+    {% csrf_token %}
+    <h2>Reply</h2>
+    {{ form.as_p }}
+    <button type="submit" class="btn">Post reply</button>
+  </form>
+{% else %}
+  <p class="muted"><a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to reply.</p>
+{% endif %}
+{% endblock %}
