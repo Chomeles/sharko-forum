@@ -26,4 +26,7 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; t
     --email "${DJANGO_SUPERUSER_EMAIL:-admin@localhost}" 2>/dev/null || true
 fi
 
+# Anonymous install ping (a random UUID + version only). Opt out: FORUM_TELEMETRY=off
+python manage.py ping_home || true
+
 exec gunicorn config.wsgi --bind 0.0.0.0:8000 --workers "${GUNICORN_WORKERS:-3}"

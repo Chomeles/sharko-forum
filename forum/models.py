@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
@@ -62,6 +64,16 @@ class Post(models.Model):
 
     def __str__(self):
         return f"#{self.pk} by {self.author}"
+
+
+class SiteInstall(models.Model):
+    """Singleton row holding a random per-install id for anonymous telemetry.
+    See the `ping_home` management command. Opt out with FORUM_TELEMETRY=off."""
+    instance_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.instance_id)
 
 
 class Shout(models.Model):

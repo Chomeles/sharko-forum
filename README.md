@@ -1,5 +1,9 @@
 # sharko-forum — a modern, self-hostable forum
 
+[![installs](https://img.shields.io/endpoint?url=https%3A%2F%2Fsharko.icu%2Fforum-stats%2Fbadge)](https://sharko.icu/forum-stats/count)
+[![GitHub stars](https://img.shields.io/github/stars/Chomeles/sharko-forum)](https://github.com/Chomeles/sharko-forum/stargazers)
+[![license](https://img.shields.io/github/license/Chomeles/sharko-forum)](LICENSE)
+
 A clean, dark, XenForo-style community forum you can stand up with **one command**.
 Built on Django 5.2 LTS + Postgres. No build step, no Node, no JS framework — just a
 fast server-rendered app you can actually read and maintain.
@@ -96,6 +100,20 @@ python manage.py runserver
 
 Django 5.2 LTS · PostgreSQL · gunicorn · WhiteNoise · server-rendered templates + a
 sprinkle of vanilla JS. That's the whole list.
+
+## Telemetry (anonymous, opt-out)
+
+On startup each instance sends **one** anonymous ping so the project can show an
+install count (the `installs` badge above counts Docker **and** manual installs).
+It contains only:
+
+- a **random UUID** generated once per install — not linked to you, your users, or any content
+- the app **version**
+
+No IP addresses are stored, and the receiver logs nothing. See
+[`forum/management/commands/ping_home.py`](forum/management/commands/ping_home.py) —
+it's ~30 lines of stdlib, read it. To turn it off completely, set `FORUM_TELEMETRY=off`
+in your `.env`. To point it at your own counter instead, set `TELEMETRY_URL`.
 
 ## License
 
