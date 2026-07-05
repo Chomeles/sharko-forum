@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Exists, F, Max, OuterRef, Q, Subquery
+from django.db.models import Count, Exists, F, OuterRef, Q, Subquery
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -28,15 +28,17 @@ def _author_stats(user, author_ids):
 
 
 def index(request):
-    latest = Thread.objects.filter(category=OuterRef("pk")).order_by("-bumped")
+    # "Last post" cell = the most recent POST in the category (its author + time),
+    # not the newest thread's starter.
+    last_post = Post.objects.filter(thread__category=OuterRef("pk")).order_by("-created", "-pk")
     categories = (
         Category.objects.annotate(
             thread_count=Count("threads", distinct=True),
             post_count=Count("threads__posts"),
-            last_bumped=Max("threads__bumped"),
-            last_thread_id=Subquery(latest.values("pk")[:1]),
-            last_thread_title=Subquery(latest.values("title")[:1]),
-            last_author=Subquery(latest.values("author__username")[:1]),
+            last_post_at=Subquery(last_post.values("created")[:1]),
+            last_author=Subquery(last_post.values("author__username")[:1]),
+            last_thread_id=Subquery(last_post.values("thread_id")[:1]),
+            last_thread_title=Subquery(last_post.values("thread__title")[:1]),
         )
         .order_by("section", "position", "name")
     )
@@ -127,7 +129,12 @@ def toggle_like(request, pk):
     count = post.likers.count()
     if request.headers.get("x-requested-with") == "fetch":
         return JsonResponse({"liked": liked, "count": count})
-    return redirect(f"{post.thread.get_absolute_url()}#post-{post.pk}")
+    # No-JS fallback: land back on the post's own page, not page 1.
+    pos = post.thread.posts.filter(
+        Q(created__lt=post.created) | Q(created=post.created, pk__lte=post.pk)
+    ).count()
+    page = math.ceil(pos / POSTS_PER_PAGE)
+    return redirect(f"{post.thread.get_absolute_url()}?page={page}#post-{post.pk}")
 
 
 @login_required
@@ -135,6 +142,9 @@ def edit_post(request, pk):
     post = get_object_or_404(Post.objects.select_related("thread"), pk=pk)
     if post.author_id != request.user.id and not request.user.is_staff:
         return HttpResponseForbidden("Not your post.")
+    # Locking freezes content (reply() enforces the same) — staff stay exempt.
+    if post.thread.is_locked and not request.user.is_staff:
+        return HttpResponseForbidden("Thread is locked.")
     form = PostForm(request.POST or None, instance=post)
     if request.method == "POST" and form.is_valid():
         post = form.save(commit=False)
@@ -149,11 +159,17 @@ def search(request):
     threads = []
     if q:
         # ponytail: LIKE search; swap for Postgres SearchVector/GIN when volume warrants
-        threads = (
+        # Two steps on purpose: annotating Count("posts") on the filtered query would
+        # reuse the body-match join and undercount, so match first, then count clean.
+        match_ids = list(
             Thread.objects.filter(Q(title__icontains=q) | Q(posts__body__icontains=q))
+            .values_list("pk", flat=True)
+            .distinct()[:50]
+        )
+        threads = (
+            Thread.objects.filter(pk__in=match_ids)
             .select_related("category", "author")
             .annotate(post_count=Count("posts"))
-            .distinct()[:50]
         )
     return render(request, "forum/search.html", {"q": q, "threads": threads})
 

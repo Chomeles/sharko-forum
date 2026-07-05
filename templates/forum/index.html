@@ -22,7 +22,7 @@
           <div class="node-last">
             {% if cat.last_thread_id %}
               <a class="last-title" href="{% url 'forum:thread' cat.last_thread_id %}">{{ cat.last_thread_title|truncatechars:38 }}</a>
-              <span class="meta">by {{ cat.last_author }} · {{ cat.last_bumped|timesince }} ago</span>
+              <span class="meta">by {{ cat.last_author }} · {{ cat.last_post_at|timesince }} ago</span>
             {% else %}
               <span class="meta">No threads yet</span>
             {% endif %}

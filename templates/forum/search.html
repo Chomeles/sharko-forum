@@ -16,7 +16,7 @@
           <a class="thread-title" href="{{ thread.get_absolute_url }}">{{ thread.title }}</a>
           <p class="meta">in {{ thread.category.name }} · by {{ thread.author.username }} · {{ thread.created|timesince }} ago</p>
         </div>
-        <div class="thread-nums"><span><strong>{{ thread.post_count }}</strong> posts</span></div>
+        <div class="thread-nums"><span><strong>{{ thread.post_count }}</strong> post{{ thread.post_count|pluralize }}</span></div>
       </div>
     {% empty %}
       <p class="muted empty">Nothing found.</p>

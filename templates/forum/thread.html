@@ -14,7 +14,7 @@
     {{ thread.title }}
   </h1>
 </div>
-<p class="muted thread-sub">{{ thread.views }} views · {{ thread.posts.count }} posts</p>
+<p class="muted thread-sub">{{ thread.views }} view{{ thread.views|pluralize }} · {{ thread.posts.count }} post{{ thread.posts.count|pluralize }}</p>
 
 {% for post in page %}
   {% with r=post.author_stats|rank_for %}
@@ -33,7 +33,7 @@
       <div class="post-head">
         <span class="meta">{{ post.created|date:"j M Y, H:i" }}
           {% if post.edited %} · edited {{ post.edited|timesince }} ago{% endif %}</span>
-        {% if post.author_id == user.id or user.is_staff %}
+        {% if user.is_staff or post.author_id == user.id and not thread.is_locked %}
           <a class="meta post-edit" href="{% url 'forum:edit_post' post.pk %}">edit</a>
         {% endif %}
       </div>
