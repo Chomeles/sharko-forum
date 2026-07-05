@@ -6,6 +6,8 @@ fast server-rendered app you can actually read and maintain.
 
 **Live demo:** https://sharko.icu/forum/
 
+![sharko-forum dark index](docs/screenshot.png)
+
 ## Features
 
 - **Categories → threads → posts**, grouped into sections with icons on the index

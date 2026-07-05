@@ -113,9 +113,16 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_PATH = os.environ.get("SESSION_COOKIE_PATH", "/")
 CSRF_COOKIE_PATH = os.environ.get("CSRF_COOKIE_PATH", "/")
 
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "forum@localhost")
+# With no SMTP host, print password-reset links to the log instead of 500-ing on
+# a box with no mail server (e.g. the Docker deploy). Set EMAIL_HOST for real mail.
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND") or (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
 
 # Errors and security warnings → stderr → the process manager's logs.
 LOGGING = {
