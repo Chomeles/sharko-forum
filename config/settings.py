@@ -3,10 +3,23 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+
+def env_list(name, default=""):
+    return [x.strip() for x in os.environ.get(name, default).split(",") if x.strip()]
+
+
 DEBUG = os.environ.get("DJANGO_DEBUG", "") == "1"
-ALLOWED_HOSTS = ["sharko.icu", "www.sharko.icu", "127.0.0.1", "localhost"]
-CSRF_TRUSTED_ORIGINS = ["https://sharko.icu", "https://www.sharko.icu"]
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise RuntimeError("DJANGO_SECRET_KEY must be set (see .env.example)")
+    from django.core.management.utils import get_random_secret_key
+
+    SECRET_KEY = "insecure-dev-" + get_random_secret_key()
+
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -20,6 +33,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise serves static files straight from gunicorn — no separate static
+    # server needed for the Docker/one-command deploy.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -30,6 +46,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
+
+# Set to a prefix (e.g. "/forum") when the app is proxied under a sub-path and the
+# proxy strips that prefix; keeps URL reversing correct. Empty = served at root.
+FORCE_SCRIPT_NAME = os.environ.get("FORCE_SCRIPT_NAME") or None
 
 TEMPLATES = [
     {
@@ -53,7 +73,7 @@ DATABASES = {
         "USER": os.environ.get("POSTGRES_USER", "forum"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
         "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
-        "PORT": "5432",
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
         "CONN_MAX_AGE": 60,
     }
 }
@@ -66,17 +86,17 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "Europe/Berlin"
+TIME_ZONE = os.environ.get("TIME_ZONE", "UTC")
 USE_I18N = True
 USE_TZ = True
 
-# Served by Caddy from STATIC_ROOT; hashed filenames = safe immutable caching.
-STATIC_URL = "/forum/static/"
+STATIC_URL = os.environ.get("DJANGO_STATIC_URL", "/static/")
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+    # Compresses + content-hashes filenames → safe long-lived caching.
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -85,19 +105,19 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "forum:index"
 LOGOUT_REDIRECT_URL = "forum:index"
 
-# Behind Caddy (which is behind Cloudflare); Caddy sets X-Forwarded-Proto.
+# Honour the proxy's X-Forwarded-Proto so Django knows the request was HTTPS.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-# Domain hosts several apps — keep forum cookies out of their requests.
-SESSION_COOKIE_PATH = "/forum"
-CSRF_COOKIE_PATH = "/forum"
+# Default "/"; set to the sub-path when co-hosting so cookies don't leak to siblings.
+SESSION_COOKIE_PATH = os.environ.get("SESSION_COOKIE_PATH", "/")
+CSRF_COOKIE_PATH = os.environ.get("CSRF_COOKIE_PATH", "/")
 
-# Local exim relays password-reset mail.
-EMAIL_HOST = "localhost"
-DEFAULT_FROM_EMAIL = "forum@sharko.icu"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "forum@localhost")
 
-# Errors and security warnings → stderr → gunicorn → journald
+# Errors and security warnings → stderr → the process manager's logs.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
