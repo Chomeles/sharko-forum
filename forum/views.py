@@ -2,10 +2,11 @@ import math
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Max
-from django.http import HttpResponseForbidden
+from django.db.models import Count, Exists, F, Max, OuterRef, Q, Subquery
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -17,12 +18,35 @@ POSTS_PER_PAGE = 20
 THREADS_PER_PAGE = 25
 
 
-def index(request):
-    categories = Category.objects.annotate(
-        thread_count=Count("threads", distinct=True),
-        last_activity=Max("threads__bumped"),
+def _author_stats(user, author_ids):
+    """{user_id: User annotated with msg_count + rep} for the given ids, in one query."""
+    users = User.objects.filter(id__in=author_ids).annotate(
+        msg_count=Count("posts", distinct=True),
+        rep=Count("posts__likers"),
     )
-    return render(request, "forum/index.html", {"categories": categories})
+    return {u.id: u for u in users}
+
+
+def index(request):
+    latest = Thread.objects.filter(category=OuterRef("pk")).order_by("-bumped")
+    categories = (
+        Category.objects.annotate(
+            thread_count=Count("threads", distinct=True),
+            post_count=Count("threads__posts"),
+            last_bumped=Max("threads__bumped"),
+            last_thread_id=Subquery(latest.values("pk")[:1]),
+            last_thread_title=Subquery(latest.values("title")[:1]),
+            last_author=Subquery(latest.values("author__username")[:1]),
+        )
+        .order_by("section", "position", "name")
+    )
+    stats = {
+        "members": User.objects.count(),
+        "threads": Thread.objects.count(),
+        "posts": Post.objects.count(),
+        "newest": User.objects.order_by("-date_joined").first(),
+    }
+    return render(request, "forum/index.html", {"categories": categories, "stats": stats})
 
 
 def category_detail(request, slug):
@@ -34,8 +58,20 @@ def category_detail(request, slug):
 
 def thread_detail(request, pk):
     thread = get_object_or_404(Thread.objects.select_related("category", "author"), pk=pk)
-    posts = thread.posts.select_related("author")
+    # ponytail: racy increment, fine for a view counter; no per-visitor dedup
+    Thread.objects.filter(pk=pk).update(views=F("views") + 1)
+    thread.views += 1
+
+    posts = thread.posts.select_related("author").annotate(like_count=Count("likers"))
+    if request.user.is_authenticated:
+        liked = Post.likers.through.objects.filter(post_id=OuterRef("pk"), user_id=request.user.id)
+        posts = posts.annotate(liked_by_me=Exists(liked))
     page = Paginator(posts, POSTS_PER_PAGE).get_page(request.GET.get("page"))
+
+    stats = _author_stats(request.user, {p.author_id for p in page})
+    for post in page:
+        post.author_stats = stats.get(post.author_id)
+
     return render(
         request, "forum/thread.html", {"thread": thread, "page": page, "form": PostForm()}
     )
@@ -77,6 +113,24 @@ def reply(request, pk):
 
 
 @login_required
+@require_POST
+def toggle_like(request, pk):
+    post = get_object_or_404(Post.objects.select_related("thread"), pk=pk)
+    if post.author_id == request.user.id:
+        return JsonResponse({"error": "You can't rep your own post."}, status=400)
+    if post.likers.filter(pk=request.user.id).exists():
+        post.likers.remove(request.user)
+        liked = False
+    else:
+        post.likers.add(request.user)
+        liked = True
+    count = post.likers.count()
+    if request.headers.get("x-requested-with") == "fetch":
+        return JsonResponse({"liked": liked, "count": count})
+    return redirect(f"{post.thread.get_absolute_url()}#post-{post.pk}")
+
+
+@login_required
 def edit_post(request, pk):
     post = get_object_or_404(Post.objects.select_related("thread"), pk=pk)
     if post.author_id != request.user.id and not request.user.is_staff:
@@ -88,6 +142,20 @@ def edit_post(request, pk):
         post.save()
         return redirect(post.thread)
     return render(request, "forum/post_edit.html", {"form": form, "post": post})
+
+
+def search(request):
+    q = (request.GET.get("q") or "").strip()
+    threads = []
+    if q:
+        # ponytail: LIKE search; swap for Postgres SearchVector/GIN when volume warrants
+        threads = (
+            Thread.objects.filter(Q(title__icontains=q) | Q(posts__body__icontains=q))
+            .select_related("category", "author")
+            .annotate(post_count=Count("posts"))
+            .distinct()[:50]
+        )
+    return render(request, "forum/search.html", {"q": q, "threads": threads})
 
 
 def signup(request):

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<h1>Search</h1>
+<form method="get" action="{% url 'forum:search' %}" class="panel search-panel">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search threads and posts…" autofocus>
+  <button type="submit" class="btn">Search</button>
+</form>
+
+{% if q %}
+  <p class="muted">{{ threads|length }} result{{ threads|length|pluralize }} for “{{ q }}”</p>
+  <div class="thread-list">
+    {% for thread in threads %}
+      <div class="thread-row">
+        <div class="thread-main">
+          <a class="thread-title" href="{{ thread.get_absolute_url }}">{{ thread.title }}</a>
+          <p class="meta">in {{ thread.category.name }} · by {{ thread.author.username }} · {{ thread.created|timesince }} ago</p>
+        </div>
+        <div class="thread-nums"><span><strong>{{ thread.post_count }}</strong> posts</span></div>
+      </div>
+    {% empty %}
+      <p class="muted empty">Nothing found.</p>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

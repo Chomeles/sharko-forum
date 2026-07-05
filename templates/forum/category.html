@@ -1,29 +1,39 @@
 {% extends "base.html" %}
+{% load forum_extras %}
 {% block title %}{{ category.name }}{% endblock %}
 {% block content %}
-<p class="crumbs"><a href="{% url 'forum:index' %}">Forum</a> › {{ category.name }}</p>
+<p class="crumbs"><a href="{% url 'forum:index' %}">Forum</a> <span>›</span> {{ category.name }}</p>
 <div class="page-head">
-  <h1>{{ category.name }}</h1>
-  <a class="btn" href="{% url 'forum:new_thread' category.slug %}">New thread</a>
+  <div>
+    <h1>{{ category.icon }} {{ category.name }}</h1>
+    <p class="muted">{{ category.description }}</p>
+  </div>
+  <a class="btn" href="{% url 'forum:new_thread' category.slug %}">+ New thread</a>
 </div>
-<p class="muted">{{ category.description }}</p>
 
 <div class="thread-list">
   {% for thread in page %}
     <div class="thread-row">
-      <div>
-        {% if thread.is_pinned %}<span class="badge">Pinned</span>{% endif %}
-        {% if thread.is_locked %}<span class="badge badge-muted">Locked</span>{% endif %}
-        <a class="thread-title" href="{{ thread.get_absolute_url }}">{{ thread.title }}</a>
-        <p class="meta">by {{ thread.author.username }} · started {{ thread.created|timesince }} ago</p>
+      <span class="avatar" style="--av: {{ thread.author.username|avatar_bg }}" aria-hidden="true">{{ thread.author.username|initial }}</span>
+      <div class="thread-main">
+        <div class="thread-badges">
+          {% if thread.is_pinned %}<span class="badge badge-pin">Pinned</span>{% endif %}
+          {% if thread.is_locked %}<span class="badge badge-lock">Locked</span>{% endif %}
+          <a class="thread-title" href="{{ thread.get_absolute_url }}">{{ thread.title }}</a>
+        </div>
+        <p class="meta">by {{ thread.author.username }} · {{ thread.created|timesince }} ago</p>
       </div>
-      <div class="thread-stats">
-        <span>{{ thread.post_count|add:"-1" }} repl{{ thread.post_count|add:"-1"|pluralize:"y,ies" }}</span>
-        <span class="meta">active {{ thread.bumped|timesince }} ago</span>
+      <div class="thread-nums">
+        <span><strong>{{ thread.post_count|add:"-1" }}</strong> repl{{ thread.post_count|add:"-1"|pluralize:"y,ies" }}</span>
+        <span><strong>{{ thread.views }}</strong> view{{ thread.views|pluralize }}</span>
+      </div>
+      <div class="thread-last">
+        <span class="meta">last reply</span>
+        <span>{{ thread.bumped|timesince }} ago</span>
       </div>
     </div>
   {% empty %}
-    <p class="muted">No threads yet — start the first one.</p>
+    <p class="muted empty">No threads yet — start the first one.</p>
   {% endfor %}
 </div>
 {% include "forum/_pagination.html" %}

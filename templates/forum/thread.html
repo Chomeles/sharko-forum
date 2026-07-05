@@ -1,40 +1,67 @@
 {% extends "base.html" %}
+{% load forum_extras %}
 {% block title %}{{ thread.title }}{% endblock %}
 {% block content %}
 <p class="crumbs">
-  <a href="{% url 'forum:index' %}">Forum</a> ›
-  <a href="{{ thread.category.get_absolute_url }}">{{ thread.category.name }}</a> ›
-  {{ thread.title|truncatechars:60 }}
+  <a href="{% url 'forum:index' %}">Forum</a> <span>›</span>
+  <a href="{{ thread.category.get_absolute_url }}">{{ thread.category.name }}</a> <span>›</span>
+  {{ thread.title|truncatechars:50 }}
 </p>
-<h1>
-  {% if thread.is_pinned %}<span class="badge">Pinned</span>{% endif %}
-  {% if thread.is_locked %}<span class="badge badge-muted">Locked</span>{% endif %}
-  {{ thread.title }}
-</h1>
+<div class="page-head">
+  <h1>
+    {% if thread.is_pinned %}<span class="badge badge-pin">Pinned</span>{% endif %}
+    {% if thread.is_locked %}<span class="badge badge-lock">Locked</span>{% endif %}
+    {{ thread.title }}
+  </h1>
+</div>
+<p class="muted thread-sub">{{ thread.views }} views · {{ thread.posts.count }} posts</p>
 
 {% for post in page %}
+  {% with r=post.author_stats|rank_for %}
   <article class="post" id="post-{{ post.pk }}">
-    <div class="post-head">
-      <strong>{{ post.author.username }}</strong>
-      <span class="meta">
-        {{ post.created|date:"j M Y, H:i" }}
-        {% if post.edited %} · edited {{ post.edited|timesince }} ago{% endif %}
+    <aside class="post-side">
+      <span class="avatar avatar-lg" style="--av: {{ post.author.username|avatar_bg }}" aria-hidden="true">{{ post.author.username|initial }}</span>
+      <a class="username {{ r.cls }}" href="#">{{ post.author.username }}</a>
+      <span class="usertitle {{ r.cls }}">{{ r.name }}</span>
+      <dl class="userstats">
+        <div><dt>Joined</dt><dd>{{ post.author.date_joined|date:"M Y" }}</dd></div>
+        <div><dt>Messages</dt><dd>{{ post.author_stats.msg_count|default:0 }}</dd></div>
+        <div><dt>Reputation</dt><dd>{{ post.author_stats.rep|default:0 }}</dd></div>
+      </dl>
+    </aside>
+    <div class="post-main">
+      <div class="post-head">
+        <span class="meta">{{ post.created|date:"j M Y, H:i" }}
+          {% if post.edited %} · edited {{ post.edited|timesince }} ago{% endif %}</span>
         {% if post.author_id == user.id or user.is_staff %}
-          · <a href="{% url 'forum:edit_post' post.pk %}">edit</a>
+          <a class="meta post-edit" href="{% url 'forum:edit_post' post.pk %}">edit</a>
         {% endif %}
-      </span>
+      </div>
+      <div class="post-body">{{ post.body|linebreaks }}</div>
+      <div class="post-foot">
+        {% if user.is_authenticated and post.author_id != user.id %}
+          <form class="like-form" method="post" action="{% url 'forum:toggle_like' post.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="like-btn {% if post.liked_by_me %}liked{% endif %}">
+              ▲ Rep <span class="like-count">{{ post.like_count }}</span>
+            </button>
+          </form>
+        {% else %}
+          <span class="like-static">▲ <span class="like-count">{{ post.like_count }}</span></span>
+        {% endif %}
+      </div>
     </div>
-    <div class="post-body">{{ post.body|linebreaks }}</div>
   </article>
+  {% endwith %}
 {% endfor %}
 {% include "forum/_pagination.html" %}
 
 {% if thread.is_locked %}
-  <p class="muted">This thread is locked.</p>
+  <p class="muted locked-note">🔒 This thread is locked.</p>
 {% elif user.is_authenticated %}
-  <form method="post" action="{% url 'forum:reply' thread.pk %}" class="card form-card">
+  <form method="post" action="{% url 'forum:reply' thread.pk %}" class="panel reply-form">
     {% csrf_token %}
-    <h2>Reply</h2>
+    <h2>Post a reply</h2>
     {{ form.as_p }}
     <button type="submit" class="btn">Post reply</button>
   </form>

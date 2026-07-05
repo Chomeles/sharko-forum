@@ -1,18 +1,25 @@
-{% load static %}<!doctype html>
+{% load static forum_extras %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Forum{% endblock %} · sharko.icu</title>
   <link rel="stylesheet" href="{% static 'forum.css' %}">
+  <script src="{% static 'forum.js' %}" defer></script>
 </head>
 <body>
 <header class="site-header">
-  <nav class="container">
-    <a class="brand" href="{% url 'forum:index' %}">Forum</a>
+  <div class="container header-inner">
+    <a class="brand" href="{% url 'forum:index' %}">sharko<span>·forum</span></a>
+    <form class="search" method="get" action="{% url 'forum:search' %}" role="search">
+      <input type="search" name="q" placeholder="Search…" value="{{ request.GET.q|default:'' }}" aria-label="Search">
+    </form>
     <div class="nav-right">
       {% if user.is_authenticated %}
-        <span class="muted">{{ user.username }}</span>
+        <span class="me" style="--av: {{ user.username|avatar_bg }}">
+          <span class="avatar avatar-sm" aria-hidden="true">{{ user.username|initial }}</span>
+          {{ user.username }}
+        </span>
         {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}
           <button type="submit" class="linklike">Log out</button>
@@ -22,13 +29,13 @@
         <a class="btn" href="{% url 'forum:signup' %}">Sign up</a>
       {% endif %}
     </div>
-  </nav>
+  </div>
 </header>
 <main class="container">
   {% block content %}{% endblock %}
 </main>
-<footer class="container muted">
-  <p>sharko.icu forum</p>
+<footer class="container site-footer">
+  <p>sharko.icu forum · built on Django</p>
 </footer>
 </body>
 </html>

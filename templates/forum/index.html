@@ -1,19 +1,44 @@
 {% extends "base.html" %}
+{% load forum_extras %}
 {% block title %}Forum{% endblock %}
 {% block content %}
-<h1>Categories</h1>
-<div class="cards">
-  {% for cat in categories %}
-    <a class="card" href="{{ cat.get_absolute_url }}">
-      <h2>{{ cat.name }}</h2>
-      <p class="muted">{{ cat.description }}</p>
-      <p class="meta">
-        {{ cat.thread_count }} thread{{ cat.thread_count|pluralize }}
-        {% if cat.last_activity %} · last activity {{ cat.last_activity|timesince }} ago{% endif %}
-      </p>
-    </a>
-  {% empty %}
-    <p class="muted">No categories yet.</p>
-  {% endfor %}
+
+{% regroup categories by section as sections %}
+{% for section in sections %}
+  <section class="node-section">
+    <div class="section-head">{{ section.grouper }}</div>
+    <div class="node-list">
+      {% for cat in section.list %}
+        <div class="node-row">
+          <div class="node-icon">{{ cat.icon }}</div>
+          <div class="node-main">
+            <a class="node-title" href="{{ cat.get_absolute_url }}">{{ cat.name }}</a>
+            <p class="node-desc">{{ cat.description }}</p>
+          </div>
+          <div class="node-stats">
+            <span><strong>{{ cat.thread_count }}</strong> threads</span>
+            <span><strong>{{ cat.post_count }}</strong> messages</span>
+          </div>
+          <div class="node-last">
+            {% if cat.last_thread_id %}
+              <a class="last-title" href="{% url 'forum:thread' cat.last_thread_id %}">{{ cat.last_thread_title|truncatechars:38 }}</a>
+              <span class="meta">by {{ cat.last_author }} · {{ cat.last_bumped|timesince }} ago</span>
+            {% else %}
+              <span class="meta">No threads yet</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endfor %}
+
+<div class="stats-bar">
+  <div><strong>{{ stats.threads }}</strong><span>Threads</span></div>
+  <div><strong>{{ stats.posts }}</strong><span>Messages</span></div>
+  <div><strong>{{ stats.members }}</strong><span>Members</span></div>
+  {% if stats.newest %}
+    <div class="newest"><span>Newest member</span><strong>{{ stats.newest.username }}</strong></div>
+  {% endif %}
 </div>
 {% endblock %}
