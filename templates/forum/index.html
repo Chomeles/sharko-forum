@@ -28,6 +28,13 @@
   {% endif %}
 </section>
 
+{% if online %}
+<section class="online-bar">
+  <span class="online-head"><span class="live-dot"></span> Online now ({{ online|length }})</span>
+  {% for o in online %}<a class="username {{ o.cls }}">{{ o.name }}</a>{% endfor %}
+</section>
+{% endif %}
+
 {% regroup categories by section as sections %}
 {% for section in sections %}
   <section class="node-section">

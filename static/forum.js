@@ -27,6 +27,17 @@ document.addEventListener("submit", async (e) => {
   }
 });
 
+// Quote button: prefill the reply textarea with a [quote] block and jump to it.
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".quote-btn");
+  if (!b) return;
+  const ta = document.getElementById("id_body");
+  if (!ta) return;
+  ta.value += (ta.value ? "\n" : "") + `[quote=${b.dataset.author}]${b.dataset.body}[/quote]\n`;
+  ta.focus();
+  ta.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
 // ── Shoutbox: poll the feed, submit via fetch. Uses textContent (no innerHTML) ──
 (function () {
   const box = document.getElementById("shoutbox");

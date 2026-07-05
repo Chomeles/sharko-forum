@@ -37,8 +37,11 @@
           <a class="meta post-edit" href="{% url 'forum:edit_post' post.pk %}">edit</a>
         {% endif %}
       </div>
-      <div class="post-body">{{ post.body|linebreaks }}</div>
+      <div class="post-body">{{ post.body|render_post:unlocked }}</div>
       <div class="post-foot">
+        {% if user.is_authenticated and not thread.is_locked %}
+          <button type="button" class="quote-btn" data-author="{{ post.author.username }}" data-body="{{ post.body }}">Quote</button>
+        {% endif %}
         {% if user.is_authenticated and post.author_id != user.id %}
           <form class="like-form" method="post" action="{% url 'forum:toggle_like' post.pk %}">
             {% csrf_token %}
@@ -63,6 +66,7 @@
     {% csrf_token %}
     <h2>Post a reply</h2>
     {{ form.as_p }}
+    <p class="muted fmt-hint">Formatting: <code>[b] [i] [url] [img] [quote] [code]</code> · <code>[hide]…[/hide]</code> hides content until someone replies · <code>@user</code> to notify.</p>
     <button type="submit" class="btn">Post reply</button>
   </form>
 {% else %}

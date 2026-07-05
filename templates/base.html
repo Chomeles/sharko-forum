@@ -16,6 +16,7 @@
     </form>
     <div class="nav-right">
       {% if user.is_authenticated %}
+        <a class="notif" href="{% url 'forum:notifications' %}" title="Notifications" aria-label="Notifications">🔔{% if notif_count %}<span class="notif-badge">{{ notif_count }}</span>{% endif %}</a>
         <span class="me" style="--av: {{ user.username|avatar_bg }}">
           <span class="avatar avatar-sm" aria-hidden="true">{{ user.username|initial }}</span>
           {{ user.username }}

@@ -1,8 +1,17 @@
 import hashlib
 
 from django import template
+from django.utils.safestring import mark_safe
+
+from forum import bbcode
 
 register = template.Library()
+
+
+@register.filter
+def render_post(body, unlocked=False):
+    """BBCode/markdown → safe HTML. `unlocked` reveals [hide] blocks. See forum/bbcode.py."""
+    return mark_safe(bbcode.render(body, bool(unlocked)))
 
 # (min_messages, name, css-class). Checked high → low.
 RANKS = [

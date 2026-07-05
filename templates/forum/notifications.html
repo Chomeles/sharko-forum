@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load forum_extras %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Notifications</h1></div>
+<div class="panel notif-list">
+  {% for n in notes %}
+    <a class="notif-row {% if not n.is_read %}unread{% endif %}"
+       href="{% if n.post %}{% url 'forum:thread' n.post.thread_id %}#post-{{ n.post_id }}{% else %}#{% endif %}">
+      <span class="avatar avatar-sm" style="--av: {{ n.actor.username|avatar_bg }}" aria-hidden="true">{{ n.actor.username|initial }}</span>
+      <span class="notif-text"><strong>{{ n.actor.username }}</strong> {{ n.verb }}</span>
+      <span class="meta">{{ n.created|timesince }} ago</span>
+    </a>
+  {% empty %}
+    <p class="muted">No notifications yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

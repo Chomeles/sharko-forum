@@ -1,4 +1,5 @@
 import math
+import re
 from datetime import timedelta
 
 from django.contrib.auth import login
@@ -14,12 +15,14 @@ from django.utils.timesince import timesince
 from django.views.decorators.http import require_POST
 
 from .forms import PostForm, SignupForm, ThreadForm
-from .models import Category, Post, Shout, Thread
+from .models import Category, Notification, Post, Shout, Thread
 from .templatetags.forum_extras import rank_for
 
 POSTS_PER_PAGE = 20
 THREADS_PER_PAGE = 25
 SHOUTS_SHOWN = 25
+ONLINE_WINDOW = timedelta(minutes=5)
+MENTION_RE = re.compile(r"@(\w{1,150})")
 # "Not a grey newbie": Member rank or above (matches RANKS in forum_extras) — or staff.
 SHOUT_MIN_MESSAGES = 10
 
@@ -28,6 +31,22 @@ def can_shout(user):
     if not user.is_authenticated:
         return False
     return user.is_staff or user.posts.count() >= SHOUT_MIN_MESSAGES
+
+
+def _notify_reply(post):
+    """Alert the thread author + any @mentioned users about a new post (never self)."""
+    actor = post.author
+    notes = []
+    if post.thread.author_id != actor.id:
+        notes.append(Notification(recipient_id=post.thread.author_id, actor=actor, post=post,
+                                  verb=f"replied to your thread “{post.thread.title[:60]}”"))
+    names = list(set(MENTION_RE.findall(post.body)))[:20]
+    if names:
+        mentioned = User.objects.filter(username__in=names).exclude(id=actor.id)
+        notes += [Notification(recipient=u, actor=actor, post=post,
+                               verb=f"mentioned you in “{post.thread.title[:60]}”")
+                  for u in mentioned if u.id != post.thread.author_id]
+    Notification.objects.bulk_create(notes)
 
 
 def _shout_payload(shouts):
@@ -82,11 +101,15 @@ def index(request):
         "posts": Post.objects.count(),
         "newest": User.objects.order_by("-date_joined").first(),
     }
+    online_users = list(User.objects.filter(presence__seen__gte=timezone.now() - ONLINE_WINDOW))
+    ostats = _author_stats(request.user, {u.id for u in online_users})
+    online = [{"name": u.username, "cls": rank_for(ostats.get(u.id))["cls"]} for u in online_users]
     return render(request, "forum/index.html", {
         "categories": categories,
         "stats": stats,
         "shouts": _recent_shouts(),
         "can_shout": can_shout(request.user),
+        "online": online,
     })
 
 
@@ -113,8 +136,15 @@ def thread_detail(request, pk):
     for post in page:
         post.author_stats = stats.get(post.author_id)
 
+    # [hide] blocks reveal once you've participated (or own/moderate the thread).
+    unlocked = request.user.is_authenticated and (
+        request.user.is_staff
+        or thread.author_id == request.user.id
+        or thread.posts.filter(author=request.user).exists()
+    )
     return render(
-        request, "forum/thread.html", {"thread": thread, "page": page, "form": PostForm()}
+        request, "forum/thread.html",
+        {"thread": thread, "page": page, "form": PostForm(), "unlocked": unlocked},
     )
 
 
@@ -127,9 +157,10 @@ def new_thread(request, slug):
             thread = Thread.objects.create(
                 category=category, author=request.user, title=form.cleaned_data["title"]
             )
-            Post.objects.create(
+            post = Post.objects.create(
                 thread=thread, author=request.user, body=form.cleaned_data["body"]
             )
+        _notify_reply(post)  # thread author == poster, so this only fires @mentions
         return redirect(thread)
     return render(request, "forum/thread_form.html", {"category": category, "form": form})
 
@@ -148,6 +179,7 @@ def reply(request, pk):
     post.thread = thread
     post.author = request.user
     post.save()
+    _notify_reply(post)
     Thread.objects.filter(pk=pk).update(bumped=timezone.now())
     last_page = math.ceil(thread.posts.count() / POSTS_PER_PAGE)
     return redirect(f"{thread.get_absolute_url()}?page={last_page}#post-{post.pk}")
@@ -232,6 +264,13 @@ def shout_post(request):
         return JsonResponse({"error": "Slow down."}, status=429)
     Shout.objects.create(author=request.user, body=body)
     return JsonResponse({"shouts": _recent_shouts()})
+
+
+@login_required
+def notifications(request):
+    notes = list(request.user.notifications.select_related("actor", "post__thread")[:50])
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    return render(request, "forum/notifications.html", {"notes": notes})
 
 
 def signup(request):

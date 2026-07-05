@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("signup/", views.signup, name="signup"),
     path("search/", views.search, name="search"),
+    path("notifications/", views.notifications, name="notifications"),
     path("shoutbox/", views.shoutbox_feed, name="shoutbox"),
     path("shoutbox/post/", views.shout_post, name="shout_post"),
     path("c/<slug:slug>/", views.category_detail, name="category"),

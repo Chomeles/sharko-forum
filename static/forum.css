@@ -277,3 +277,29 @@ p { margin: .7rem 0; }
   .post-side .userstats { display: none; }
   .search { display: none; }
 }
+
+/* ── Post formatting (BBCode/markdown), quote & hidden content ── */
+.post-body blockquote { margin: .6rem 0; padding: .5rem .9rem; border-left: 3px solid var(--accent); background: var(--bg2); border-radius: 0 8px 8px 0; }
+.post-body blockquote cite { display: block; font-size: .78rem; color: var(--muted); font-style: normal; margin-bottom: .3rem; }
+.post-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .7rem .9rem; overflow-x: auto; }
+.post-body code { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: .05rem .35rem; font-size: .88em; }
+.post-body pre code { background: none; border: none; padding: 0; }
+.post-body .post-img { max-width: 100%; border-radius: 8px; margin: .4rem 0; }
+.hidden-content { margin: .6rem 0; padding: .7rem .9rem; border: 1px dashed var(--border2); border-radius: 8px; background: var(--bg2); color: var(--muted); font-size: .9rem; }
+.quote-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: .2rem .6rem; font-size: .8rem; cursor: pointer; }
+.quote-btn:hover { color: var(--text); border-color: var(--border2); }
+.fmt-hint { font-size: .78rem; }
+.fmt-hint code { background: var(--bg2); border-radius: 4px; padding: .05rem .3rem; }
+
+/* ── Notifications ── */
+.notif { position: relative; text-decoration: none; font-size: 1.1rem; }
+.notif-badge { position: absolute; top: -.4rem; right: -.5rem; background: #fb7185; color: #fff; font-size: .68rem; font-weight: 700; min-width: 1.05rem; height: 1.05rem; line-height: 1.05rem; text-align: center; border-radius: 999px; padding: 0 .25rem; }
+.notif-list { padding: 0; }
+.notif-row { display: flex; align-items: center; gap: .7rem; padding: .7rem .9rem; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--text); }
+.notif-row:last-child { border-bottom: none; }
+.notif-row.unread { background: var(--bg2); }
+.notif-row .notif-text { flex: 1; }
+
+/* ── Online now ── */
+.online-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .6rem .9rem; margin-bottom: 1.2rem; font-size: .9rem; }
+.online-head { color: var(--muted); font-size: .82rem; display: inline-flex; align-items: center; gap: .4rem; }

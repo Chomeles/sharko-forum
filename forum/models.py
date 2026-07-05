@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 
 class Category(models.Model):
@@ -88,3 +89,23 @@ class Shout(models.Model):
 
     def __str__(self):
         return f"{self.author}: {self.body[:40]}"
+
+
+class Notification(models.Model):
+    """A reply-to-your-thread or @mention alert. Created in views, marked read on view."""
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="+", null=True, blank=True)
+    verb = models.CharField(max_length=140)
+    is_read = models.BooleanField(default=False)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created"]
+        indexes = [models.Index(fields=["recipient", "is_read"])]
+
+
+class Presence(models.Model):
+    """Last-seen stamp per user, updated by PresenceMiddleware, read for the online list."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="presence")
+    seen = models.DateTimeField(default=timezone.now)

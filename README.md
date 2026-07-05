@@ -15,6 +15,10 @@ fast server-rendered app you can actually read and maintain.
 ## Features
 
 - **Categories → threads → posts**, grouped into sections with icons on the index
+- **BBCode + light Markdown** in posts — `[b] [i] [url] [img] [quote] [code]`, `**bold**`, links (XSS-safe, no dependency)
+- **Hidden content** — `[hide]…[/hide]` reveals only after you reply (classic warez-forum unlock)
+- **Quote** button that prefills the reply box; **@mentions** and reply notifications with a navbar bell
+- **Online-now** list of recently-active members
 - **Accounts** — signup, login, password reset, per-post edit
 - **Ranks** that climb with your message count (Newbie → Member → Active → Elite), with colored usernames
 - **Reputation** — a ▲ Rep button on every post (AJAX, degrades to a normal POST without JS)
