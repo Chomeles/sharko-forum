@@ -38,6 +38,11 @@ curl -fsSL https://raw.githubusercontent.com/Chomeles/sharko-forum/main/install.
 This clones the repo, generates secrets + an admin password, and boots the app +
 Postgres. When it finishes, open **http://localhost:8000/** — admin panel at `/admin/`.
 
+Your fresh install comes **pre-seeded** with sample threads and a throwaway
+**`demo` / `demo`** login, so you can immediately try posting, quoting and
+`[hide]` unlocking without setting anything up. For a clean production install,
+set `SEED_DEMO=0` in `.env`.
+
 Prefer to do it by hand?
 
 ```bash

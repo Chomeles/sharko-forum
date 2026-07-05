@@ -26,6 +26,12 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; t
     --email "${DJANGO_SUPERUSER_EMAIL:-admin@localhost}" 2>/dev/null || true
 fi
 
+# First-boot demo content + a demo/demo login for kicking the tyres (no-op once the
+# forum has content). Set SEED_DEMO=0 in .env for a clean production install.
+if [ "${SEED_DEMO:-1}" != "0" ]; then
+  python manage.py seed_demo || true
+fi
+
 # Anonymous install ping (a random UUID + version only). Opt out: FORUM_TELEMETRY=off
 python manage.py ping_home || true
 
