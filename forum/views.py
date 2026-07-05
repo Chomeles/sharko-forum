@@ -1,4 +1,5 @@
 import math
+from datetime import timedelta
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -9,13 +10,46 @@ from django.db.models import Count, Exists, F, OuterRef, Q, Subquery
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.timesince import timesince
 from django.views.decorators.http import require_POST
 
 from .forms import PostForm, SignupForm, ThreadForm
-from .models import Category, Post, Thread
+from .models import Category, Post, Shout, Thread
+from .templatetags.forum_extras import rank_for
 
 POSTS_PER_PAGE = 20
 THREADS_PER_PAGE = 25
+SHOUTS_SHOWN = 25
+# "Not a grey newbie": Member rank or above (matches RANKS in forum_extras) — or staff.
+SHOUT_MIN_MESSAGES = 10
+
+
+def can_shout(user):
+    if not user.is_authenticated:
+        return False
+    return user.is_staff or user.posts.count() >= SHOUT_MIN_MESSAGES
+
+
+def _shout_payload(shouts):
+    """Serialize shouts (oldest→newest) with each author's rank color."""
+    stats = _author_stats(None, {s.author_id for s in shouts})
+    out = []
+    for s in shouts:
+        r = rank_for(stats.get(s.author_id))
+        out.append({
+            "id": s.id,
+            "user": s.author.username,
+            "cls": r["cls"],
+            "body": s.body,
+            "ago": timesince(s.created),
+        })
+    return out
+
+
+def _recent_shouts():
+    shouts = list(Shout.objects.select_related("author")[:SHOUTS_SHOWN])
+    shouts.reverse()  # Meta orders newest-first; chat reads oldest→newest
+    return _shout_payload(shouts)
 
 
 def _author_stats(user, author_ids):
@@ -48,7 +82,12 @@ def index(request):
         "posts": Post.objects.count(),
         "newest": User.objects.order_by("-date_joined").first(),
     }
-    return render(request, "forum/index.html", {"categories": categories, "stats": stats})
+    return render(request, "forum/index.html", {
+        "categories": categories,
+        "stats": stats,
+        "shouts": _recent_shouts(),
+        "can_shout": can_shout(request.user),
+    })
 
 
 def category_detail(request, slug):
@@ -172,6 +211,27 @@ def search(request):
             .annotate(post_count=Count("posts"))
         )
     return render(request, "forum/search.html", {"q": q, "threads": threads})
+
+
+def shoutbox_feed(request):
+    resp = JsonResponse({"shouts": _recent_shouts(), "can_shout": can_shout(request.user)})
+    resp["Cache-Control"] = "no-store"
+    return resp
+
+
+@login_required
+@require_POST
+def shout_post(request):
+    if not can_shout(request.user):
+        return JsonResponse({"error": "Reach Member rank (10 posts) to use the shoutbox."}, status=403)
+    body = (request.POST.get("body") or "").strip()[:280]
+    if not body:
+        return JsonResponse({"error": "Say something first."}, status=400)
+    # ponytail: 2s per-user cooldown to stop flooding; tighten with Redis if abused
+    if request.user.shouts.filter(created__gte=timezone.now() - timedelta(seconds=2)).exists():
+        return JsonResponse({"error": "Slow down."}, status=429)
+    Shout.objects.create(author=request.user, body=body)
+    return JsonResponse({"shouts": _recent_shouts()})
 
 
 def signup(request):

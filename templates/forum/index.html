@@ -3,6 +3,31 @@
 {% block title %}Forum{% endblock %}
 {% block content %}
 
+<section class="shoutbox" id="shoutbox"
+         data-feed="{% url 'forum:shoutbox' %}" data-post="{% url 'forum:shout_post' %}">
+  <div class="shoutbox-head"><span class="live-dot"></span> Shoutbox</div>
+  <div class="shout-list" id="shout-list">
+    {% for s in shouts %}
+      <div class="shout"><a class="username {{ s.cls }}">{{ s.user }}</a><span class="shout-body">{{ s.body }}</span><span class="shout-ago">{{ s.ago }}</span></div>
+    {% empty %}
+      <p class="muted shout-empty">No shouts yet — be the first.</p>
+    {% endfor %}
+  </div>
+  {% if user.is_authenticated %}
+    {% if can_shout %}
+      <form class="shout-form" id="shout-form">
+        {% csrf_token %}
+        <input type="text" name="body" maxlength="280" placeholder="Say something…" autocomplete="off" required>
+        <button type="submit" class="btn">Shout</button>
+      </form>
+    {% else %}
+      <p class="shout-locked">🔒 Reach <span class="rank-member">Member</span> rank (10 posts) to join the shoutbox.</p>
+    {% endif %}
+  {% else %}
+    <p class="shout-locked"><a href="{% url 'login' %}">Log in</a> to shout.</p>
+  {% endif %}
+</section>
+
 {% regroup categories by section as sections %}
 {% for section in sections %}
   <section class="node-section">
